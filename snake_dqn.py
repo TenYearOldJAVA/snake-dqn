@@ -63,21 +63,23 @@ LEFT = 3
 class DQN(nn.Module):
     def __init__(self, input_size, output_size):
         super(DQN, self).__init__()
-        self.conv1 = nn.Conv2d(3, 8, kernel_size=3)
-        self.conv2 = nn.Conv2d(8, 16, kernel_size=3)
-        self.fc_input_dim = 16*16*16
-        self.fc1 = nn.Linear(self.fc_input_dim, 128)
-        self.fc2 = nn.Linear(128, output_size)
+        self.conv1 = nn.Conv2d(3, 32, kernel_size=3, padding=1)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
+        self.fc_input_dim = 20*20*64
+        self.fc1 = nn.Linear(self.fc_input_dim, 256)
+        self.fc2 = nn.Linear(256, 128)
+        self.fc3 = nn.Linear(128, output_size)
         
     def forward(self, x):
         x = x.permute(0, 3, 1, 2)
-        x = F.relu(self.conv1(x))
-        x = F.relu(self.conv2(x))
-        x = x.reshape(x.size(0), -1)  # 保留第一维(批次)，将剩余维度展平
-        x = F.relu(self.fc1(x))
-        return self.fc2(x)
+        x = torch.relu(self.conv1(x))
+        x = torch.relu(self.conv2(x))
+        x = x.reshape(x.size(0), -1)  # 扁平化
+        x = torch.relu(self.fc1(x))
+        x = torch.relu(self.fc2(x))
+        return self.fc3(x)
 
-# 经验回放内存
+    # 经验回放内存
 class ReplayMemory:
     def __init__(self, capacity):
         self.memory = deque(maxlen=capacity)
@@ -104,6 +106,7 @@ class SnakeGame:
         self.direction = RIGHT
         self.score = 0
         self.steps = 0
+        self.step_ddl = 0
         self.last_distance = 0
         self.last_positions = []  # 记录最近的位置，用于检测原地打转
         self.generate_food()
@@ -269,10 +272,11 @@ class SnakeGame:
             if head == self.food:
                 self.score += 1
                 reward = 10
+                self.step_ddl = 0
                 self.generate_food()
             else:
                 self.snake.pop()
-                
+                self.step_ddl += 1
                 # 计算靠近/远离食物的奖励
                 current_distance = self.get_distance_to_food()
                 if current_distance < self.last_distance:
@@ -286,7 +290,9 @@ class SnakeGame:
                     unique_positions = set(self.last_positions)
                     if len(unique_positions) <= 2:  # 如果最近的位置只有2个或更少的不同点
                         reward -= 1
-        
+                if self.step_ddl > len(self.snake) + 50:
+                    reward -= 500
+                    done = True
         next_state = self.get_state()
         return next_state, reward, done
     
@@ -524,7 +530,7 @@ def main():
             print(f"新的最佳分数: {agent.best_score}，模型已保存")
         
         # 更新图表（每10轮更新一次，减少性能开销）
-        if episode % 10 == 0:
+        if episode % 100 == 0:
             update_plot(ax1, ax2, episodes, plot_scores, plot_avg_scores, plot_max, episode, num_episodes, agent.best_score)
             # 保存当前图表
             if episode % 1000 == 0 and episode > 0:
