@@ -171,22 +171,22 @@ def main():
                 pygame.draw.rect(screen, color, (x * GRID_SIZE, y * GRID_SIZE, GRID_SIZE, GRID_SIZE))
                 
                 # 为蛇头添加眼睛效果
-                if i == 0:
-                    eye_size = GRID_SIZE // 5
+                # if i == 0:
+                    # eye_size = GRID_SIZE // 5
                     # 根据方向绘制眼睛
-                    if env.direction == 0:  # UP
-                        pygame.draw.circle(screen, WHITE, (x * GRID_SIZE + GRID_SIZE // 3, y * GRID_SIZE + GRID_SIZE // 3), eye_size)
-                        pygame.draw.circle(screen, WHITE, (x * GRID_SIZE + 2 * GRID_SIZE // 3, y * GRID_SIZE + GRID_SIZE // 3), eye_size)
-                    elif env.direction == 1:  # RIGHT
-                        pygame.draw.circle(screen, WHITE, (x * GRID_SIZE + 2 * GRID_SIZE // 3, y * GRID_SIZE + GRID_SIZE // 3), eye_size)
-                        pygame.draw.circle(screen, WHITE, (x * GRID_SIZE + 2 * GRID_SIZE // 3, y * GRID_SIZE + 2 * GRID_SIZE // 3), eye_size)
-                    elif env.direction == 2:  # DOWN
-                        pygame.draw.circle(screen, WHITE, (x * GRID_SIZE + GRID_SIZE // 3, y * GRID_SIZE + 2 * GRID_SIZE // 3), eye_size)
-                        pygame.draw.circle(screen, WHITE, (x * GRID_SIZE + 2 * GRID_SIZE // 3, y * GRID_SIZE + 2 * GRID_SIZE // 3), eye_size)
-                    elif env.direction == 3:  # LEFT
-                        pygame.draw.circle(screen, WHITE, (x * GRID_SIZE + GRID_SIZE // 3, y * GRID_SIZE + GRID_SIZE // 3), eye_size)
-                        pygame.draw.circle(screen, WHITE, (x * GRID_SIZE + GRID_SIZE // 3, y * GRID_SIZE + 2 * GRID_SIZE // 3), eye_size)
-            
+                    # if env.direction == 0:  # UP
+                    #     pygame.draw.circle(screen, WHITE, (x * GRID_SIZE + GRID_SIZE // 3, y * GRID_SIZE + GRID_SIZE // 3), eye_size)
+                    #     pygame.draw.circle(screen, WHITE, (x * GRID_SIZE + 2 * GRID_SIZE // 3, y * GRID_SIZE + GRID_SIZE // 3), eye_size)
+                    # elif env.direction == 1:  # RIGHT
+                    #     pygame.draw.circle(screen, WHITE, (x * GRID_SIZE + 2 * GRID_SIZE // 3, y * GRID_SIZE + GRID_SIZE // 3), eye_size)
+                    #     pygame.draw.circle(screen, WHITE, (x * GRID_SIZE + 2 * GRID_SIZE // 3, y * GRID_SIZE + 2 * GRID_SIZE // 3), eye_size)
+                    # elif env.direction == 2:  # DOWN
+                    #     pygame.draw.circle(screen, WHITE, (x * GRID_SIZE + GRID_SIZE // 3, y * GRID_SIZE + 2 * GRID_SIZE // 3), eye_size)
+                    #     pygame.draw.circle(screen, WHITE, (x * GRID_SIZE + 2 * GRID_SIZE // 3, y * GRID_SIZE + 2 * GRID_SIZE // 3), eye_size)
+                    # elif env.direction == 3:  # LEFT
+                    #     pygame.draw.circle(screen, WHITE, (x * GRID_SIZE + GRID_SIZE // 3, y * GRID_SIZE + GRID_SIZE // 3), eye_size)
+                    #     pygame.draw.circle(screen, WHITE, (x * GRID_SIZE + GRID_SIZE // 3, y * GRID_SIZE + 2 * GRID_SIZE // 3), eye_size)
+                    #
             # 显示当前状态信息
             font = pygame.font.SysFont("arial", 15)
             info_text = font.render(f"Episode: {episode+1}/{args.episodes} Steps: {step} Score: {env.score}", True, WHITE)

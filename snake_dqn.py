@@ -63,14 +63,19 @@ LEFT = 3
 class DQN(nn.Module):
     def __init__(self, input_size, output_size):
         super(DQN, self).__init__()
-        self.fc1 = nn.Linear(input_size, 128)
-        self.fc2 = nn.Linear(128, 128)
-        self.fc3 = nn.Linear(128, output_size)
+        self.conv1 = nn.Conv2d(3, 8, kernel_size=3)
+        self.conv2 = nn.Conv2d(8, 16, kernel_size=3)
+        self.fc_input_dim = 16*16*16
+        self.fc1 = nn.Linear(self.fc_input_dim, 128)
+        self.fc2 = nn.Linear(128, output_size)
         
     def forward(self, x):
+        x = x.permute(0, 3, 1, 2)
+        x = F.relu(self.conv1(x))
+        x = F.relu(self.conv2(x))
+        x = x.reshape(x.size(0), -1)  # 保留第一维(批次)，将剩余维度展平
         x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        return self.fc3(x)
+        return self.fc2(x)
 
 # 经验回放内存
 class ReplayMemory:
@@ -115,94 +120,113 @@ class SnakeGame:
     def get_distance_to_food(self):
         head = self.snake[0]
         return math.sqrt((head[0] - self.food[0])**2 + (head[1] - self.food[1])**2)
-    
+
+    import numpy as np
+
     def get_state(self):
-        # 构建状态表示
-        head_x, head_y = self.snake[0]
-        food_x, food_y = self.food
-        tail_x, tail_y = self.snake[-1]
-        
-        # 计算蛇中点
-        mid_idx = len(self.snake) // 2
-        mid_x, mid_y = self.snake[mid_idx]
-        
-        # 检查四个方向是否有障碍物（墙或蛇身）
-        danger_straight = False
-        danger_right = False
-        danger_left = False
-        
-        # 根据当前方向判断危险
-        if self.direction == UP:
-            danger_straight = head_y == 0 or (head_x, head_y - 1) in self.snake
-            danger_right = head_x == GRID_WIDTH - 1 or (head_x + 1, head_y) in self.snake
-            danger_left = head_x == 0 or (head_x - 1, head_y) in self.snake
-        elif self.direction == RIGHT:
-            danger_straight = head_x == GRID_WIDTH - 1 or (head_x + 1, head_y) in self.snake
-            danger_right = head_y == GRID_HEIGHT - 1 or (head_x, head_y + 1) in self.snake
-            danger_left = head_y == 0 or (head_x, head_y - 1) in self.snake
-        elif self.direction == DOWN:
-            danger_straight = head_y == GRID_HEIGHT - 1 or (head_x, head_y + 1) in self.snake
-            danger_right = head_x == 0 or (head_x - 1, head_y) in self.snake
-            danger_left = head_x == GRID_WIDTH - 1 or (head_x + 1, head_y) in self.snake
-        elif self.direction == LEFT:
-            danger_straight = head_x == 0 or (head_x - 1, head_y) in self.snake
-            danger_right = head_y == 0 or (head_x, head_y - 1) in self.snake
-            danger_left = head_y == GRID_HEIGHT - 1 or (head_x, head_y + 1) in self.snake
-        
-        # 食物相对位置（基于当前方向）
-        food_left = food_right = food_up = food_down = False
-        
-        if food_x < head_x:
-            food_left = True
-        elif food_x > head_x:
-            food_right = True
-            
-        if food_y < head_y:
-            food_up = True
-        elif food_y > head_y:
-            food_down = True
-        
-        # 构建状态向量
-        state = [
-            # 危险
-            danger_straight,
-            danger_right,
-            danger_left,
-            
-            # 当前方向
-            self.direction == LEFT,
-            self.direction == RIGHT,
-            self.direction == UP,
-            self.direction == DOWN,
-            
-            # 食物位置
-            food_left,
-            food_right,
-            food_up,
-            food_down,
-            
-            # 蛇头坐标（归一化）
-            head_x / GRID_WIDTH,
-            head_y / GRID_HEIGHT,
-            
-            # 食物坐标（归一化）
-            food_x / GRID_WIDTH,
-            food_y / GRID_HEIGHT,
-            
-            # 蛇尾坐标（归一化）
-            tail_x / GRID_WIDTH,
-            tail_y / GRID_HEIGHT,
-            
-            # 蛇中点坐标（归一化）
-            mid_x / GRID_WIDTH,
-            mid_y / GRID_HEIGHT,
-            
-            # 蛇的长度（归一化）
-            len(self.snake) / (GRID_WIDTH * GRID_HEIGHT)
-        ]
-        
-        return np.array(state, dtype=np.float32)
-    
+        # Initialize a 20x20x3 numpy array with zeros
+        state = np.zeros((GRID_WIDTH, GRID_HEIGHT, 3), dtype=np.float32)
+
+        # Fill the state array
+        for i in range(GRID_WIDTH):
+            for j in range(GRID_HEIGHT):
+                if (i, j) == self.food:
+                    state[i, j, 0] = 1  # Food in channel 0
+                if (i, j) == self.snake[0]:  # Assuming snake[0] is the head
+                    state[i, j, 2] = 1  # Snake head in channel 2
+                elif (i, j) in self.snake:
+                    state[i, j, 1] = 1  # Snake body in channel 1
+        return state
+
+
+
+    # def get_state(self):
+    #     # 构建状态表示
+    #     head_x, head_y = self.snake[0]
+    #     food_x, food_y = self.food
+    #     tail_x, tail_y = self.snake[-1]
+    #
+    #     # 计算蛇中点
+    #     mid_idx = len(self.snake) // 2
+    #     mid_x, mid_y = self.snake[mid_idx]
+    #
+    #     # 检查四个方向是否有障碍物（墙或蛇身）
+    #     danger_straight = False
+    #     danger_right = False
+    #     danger_left = False
+    #
+    #     # 根据当前方向判断危险
+    #     if self.direction == UP:
+    #         danger_straight = head_y == 0 or (head_x, head_y - 1) in self.snake
+    #         danger_right = head_x == GRID_WIDTH - 1 or (head_x + 1, head_y) in self.snake
+    #         danger_left = head_x == 0 or (head_x - 1, head_y) in self.snake
+    #     elif self.direction == RIGHT:
+    #         danger_straight = head_x == GRID_WIDTH - 1 or (head_x + 1, head_y) in self.snake
+    #         danger_right = head_y == GRID_HEIGHT - 1 or (head_x, head_y + 1) in self.snake
+    #         danger_left = head_y == 0 or (head_x, head_y - 1) in self.snake
+    #     elif self.direction == DOWN:
+    #         danger_straight = head_y == GRID_HEIGHT - 1 or (head_x, head_y + 1) in self.snake
+    #         danger_right = head_x == 0 or (head_x - 1, head_y) in self.snake
+    #         danger_left = head_x == GRID_WIDTH - 1 or (head_x + 1, head_y) in self.snake
+    #     elif self.direction == LEFT:
+    #         danger_straight = head_x == 0 or (head_x - 1, head_y) in self.snake
+    #         danger_right = head_y == 0 or (head_x, head_y - 1) in self.snake
+    #         danger_left = head_y == GRID_HEIGHT - 1 or (head_x, head_y + 1) in self.snake
+    #
+    #     # 食物相对位置（基于当前方向）
+    #     food_left = food_right = food_up = food_down = False
+    #
+    #     if food_x < head_x:
+    #         food_left = True
+    #     elif food_x > head_x:
+    #         food_right = True
+    #
+    #     if food_y < head_y:
+    #         food_up = True
+    #     elif food_y > head_y:
+    #         food_down = True
+    #
+    #     # 构建状态向量
+    #     state = [
+    #         # 危险
+    #         danger_straight,
+    #         danger_right,
+    #         danger_left,
+    #
+    #         # 当前方向
+    #         self.direction == LEFT,
+    #         self.direction == RIGHT,
+    #         self.direction == UP,
+    #         self.direction == DOWN,
+    #
+    #         # 食物位置
+    #         food_left,
+    #         food_right,
+    #         food_up,
+    #         food_down,
+    #
+    #         # 蛇头坐标（归一化）
+    #         head_x / GRID_WIDTH,
+    #         head_y / GRID_HEIGHT,
+    #
+    #         # 食物坐标（归一化）
+    #         food_x / GRID_WIDTH,
+    #         food_y / GRID_HEIGHT,
+    #
+    #         # 蛇尾坐标（归一化）
+    #         tail_x / GRID_WIDTH,
+    #         tail_y / GRID_HEIGHT,
+    #
+    #         # 蛇中点坐标（归一化）
+    #         mid_x / GRID_WIDTH,
+    #         mid_y / GRID_HEIGHT,
+    #
+    #         # 蛇的长度（归一化）
+    #         len(self.snake) / (GRID_WIDTH * GRID_HEIGHT)
+    #     ]
+    #
+    #     return np.array(state, dtype=np.float32)
+    #
     def step(self, action):
         # 0: 直行, 1: 右转, 2: 左转
         # 更新方向
@@ -253,8 +277,8 @@ class SnakeGame:
                 current_distance = self.get_distance_to_food()
                 if current_distance < self.last_distance:
                     reward += 0.1
-                else:
-                    reward -= 0.1
+                # else:
+                #     reward -= 0.1
                 self.last_distance = current_distance
                 
                 # 检测原地打转
